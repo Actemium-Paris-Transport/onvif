@@ -34,6 +34,9 @@ var Xlmns = map[string]string{
 	"wsntw":   "http://docs.oasis-open.org/wsn/bw-2",
 	"wsrf-rw": "http://docs.oasis-open.org/wsrf/rw-2",
 	"wsaw":    "http://www.w3.org/2006/05/addressing/wsdl",
+	"trc":     "http://www.onvif.org/ver10/recording/wsdl",
+	"trp":     "http://www.onvif.org/ver10/replay/wsdl",
+	"tse":     "http://www.onvif.org/ver10/search/wsdl",
 }
 
 // DeviceType alias for int
@@ -195,6 +198,22 @@ func NewDevice(params DeviceParams) (*Device, error) {
 	err = dev.getSupportedServices(resp)
 	if err != nil {
 		return nil, err
+	}
+
+	return dev, nil
+}
+
+// NewDeviceWithEndpoints function construct a ONVIF Device entity with discovering endpoints by yourself, it is useful when you have already got the endpoints of the device, and you want to construct a device with these endpoints directly.
+func NewDeviceWithEndpoints(params DeviceParams, endpoints map[string]string) (*Device, error) {
+	dev := new(Device)
+	dev.params = params
+	dev.endpoints = make(map[string]string)
+	for k, v := range endpoints {
+		dev.addEndpoint(k, v)
+	}
+
+	if dev.params.HttpClient == nil {
+		dev.params.HttpClient = new(http.Client)
 	}
 
 	return dev, nil
