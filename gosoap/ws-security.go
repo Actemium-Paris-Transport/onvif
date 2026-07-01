@@ -2,6 +2,7 @@ package gosoap
 
 import (
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/xml"
 	"time"
@@ -55,8 +56,8 @@ type wsAuth struct {
    </Security>
 */
 
-//NewSecurity get a new security
-func NewSecurity(username, passwd string) Security {
+// NewSecurity get a new security
+func NewSecurity(username, passwd string, useSha256 bool) Security {
 	/** Generating Nonce sequence **/
 	charsToGenerate := 32
 	charSet := gostrgen.Lower | gostrgen.Digit
@@ -68,7 +69,7 @@ func NewSecurity(username, passwd string) Security {
 			Username: username,
 			Password: password{
 				Type:     passwordType,
-				Password: generateToken(username, nonceSeq, created, passwd),
+				Password: generateToken(username, nonceSeq, created, passwd, useSha256),
 			},
 			Nonce: nonce{
 				Type:  encodingType,
@@ -81,11 +82,20 @@ func NewSecurity(username, passwd string) Security {
 	return auth
 }
 
-//Digest = B64ENCODE( SHA1( B64DECODE( Nonce ) + Date + Password ) )
-func generateToken(Username string, Nonce string, Created string, Password string) string {
+// Digest = B64ENCODE( SHA1( B64DECODE( Nonce ) + Date + Password ) )
+// or B64ENCODE( SHA256( B64DECODE( Nonce ) + Date + Password ) ) when useSha256 is true
+func generateToken(Username string, Nonce string, Created string, Password string, useSha256 bool) string {
 	sDec, _ := base64.StdEncoding.DecodeString(Nonce)
 
-	hasher := sha1.New()
+	var hasher interface {
+		Write([]byte) (int, error)
+		Sum([]byte) []byte
+	}
+	if useSha256 {
+		hasher = sha256.New()
+	} else {
+		hasher = sha1.New()
+	}
 	hasher.Write([]byte(string(sDec) + Created + Password))
 
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
