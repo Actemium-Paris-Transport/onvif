@@ -82,6 +82,7 @@ type Device struct {
 	params    DeviceParams
 	endpoints map[string]string
 	info      DeviceInfo
+	useSha256 bool
 }
 
 type DeviceParams struct {
@@ -182,6 +183,7 @@ func NewDevice(params DeviceParams) (*Device, error) {
 	dev.params = params
 	dev.endpoints = make(map[string]string)
 	dev.addEndpoint("Device", "http://"+dev.params.Xaddr+"/onvif/device_service")
+	dev.useSha256 = false
 
 	if dev.params.HttpClient == nil {
 		dev.params.HttpClient = new(http.Client)
@@ -204,13 +206,14 @@ func NewDevice(params DeviceParams) (*Device, error) {
 }
 
 // NewDeviceWithEndpoints function construct a ONVIF Device entity with discovering endpoints by yourself, it is useful when you have already got the endpoints of the device, and you want to construct a device with these endpoints directly.
-func NewDeviceWithEndpoints(params DeviceParams, endpoints map[string]string) (*Device, error) {
+func NewDeviceWithEndpoints(params DeviceParams, endpoints map[string]string, useSha256 bool) (*Device, error) {
 	dev := new(Device)
 	dev.params = params
 	dev.endpoints = make(map[string]string)
 	for k, v := range endpoints {
 		dev.addEndpoint(k, v)
 	}
+	dev.useSha256 = useSha256
 
 	if dev.params.HttpClient == nil {
 		dev.params.HttpClient = new(http.Client)
@@ -304,7 +307,7 @@ func (dev Device) callMethodDo(endpoint string, method interface{}) (*http.Respo
 
 	//Auth Handling
 	if dev.params.Username != "" && dev.params.Password != "" {
-		soap.AddWSSecurity(dev.params.Username, dev.params.Password)
+		soap.AddWSSecurity(dev.params.Username, dev.params.Password, dev.useSha256)
 	}
 
 	return networking.SendSoap(dev.params.HttpClient, endpoint, soap.String())
